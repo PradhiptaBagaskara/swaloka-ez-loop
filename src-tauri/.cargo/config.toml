@@ -1,0 +1,17 @@
+# Windows: tautkan runtime C secara statis (+crt-static) supaya exe tidak lagi
+# membutuhkan vcruntime140.dll / vc_redist. Installer NSIS Tauri default-nya
+# per-user (tanpa admin), jadi memasang vc_redist dari hook akan memunculkan UAC.
+#
+# Verifikasi setelah build di Windows:
+#   dumpbin /dependents target\release\Swaloka.exe
+# Output tidak boleh memuat VCRUNTIME140.dll.
+#
+# Kalau suatu saat proc-macro/build-script bermasalah karena host == target,
+# alternatifnya crate `static_vcruntime` (hybrid linking) atau kembali memakai
+# vc_redist lewat NSIS_HOOK_POSTINSTALL.
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

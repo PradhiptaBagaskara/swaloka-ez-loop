@@ -1,0 +1,90 @@
+name: Release
+
+# Membangun installer untuk semua platform lalu mempublikasikannya ke GitHub Release.
+# - push tag `v*` / `sw-tauri-v*` : build + publish release.
+# - workflow_dispatch            : build saja (hasilnya artifact di run tersebut).
+on:
+  push:
+    tags:
+      - "v*"
+      - "*-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versi opsional (mis. 6.1.0). Kosong = pakai nilai di tauri.conf.json"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tauri-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Tentukan versi
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.detect.outputs.version }}
+    steps:
+      - name: Baca versi dari tag
+        id: detect
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME##*v}"
+          else
+            VERSION="$INPUT_VERSION"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Versi: ${VERSION:-<dari tauri.conf.json>}"
+
+  build-macos:
+    name: macOS
+    needs: version
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      artifact-name: swaloka-macos
+      version: ${{ needs.version.outputs.version }}
+
+  build-windows:
+    name: Windows
+    needs: version
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      artifact-name: swaloka-windows
+      version: ${{ needs.version.outputs.version }}
+
+  build-linux:
+    name: Linux
+    needs: version
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      artifact-name: swaloka-linux
+      version: ${{ needs.version.outputs.version }}
+
+  publish:
+    name: Publish GitHub Release
+    needs: [version, build-macos, build-windows, build-linux]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download semua installer
+        uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+
+      - name: Publikasikan release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Swaloka ${{ needs.version.outputs.version }}
+          files: installers/**/*
+          fail_on_unmatched_files: true
+          draft: false
+          generate_release_notes: true

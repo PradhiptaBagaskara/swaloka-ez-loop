@@ -1,0 +1,40 @@
+{
+  "name": "Swaloka EZ Loop",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "clean": "node scripts/clean.mjs",
+    "clean:user": "node scripts/clean.mjs --user",
+    "clean:all": "node scripts/clean.mjs --all",
+    "release": "tauri build",
+    "pack:macos": "tauri build --bundles dmg",
+    "pack:windows": "tauri build --bundles msi,nsis",
+    "pack:linux": "tauri build --bundles deb,rpm,appimage",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.2",
+    "@tauri-apps/plugin-dialog": "^2.8.1",
+    "@tauri-apps/plugin-opener": "^2.7.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "^2.12.1",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^26.6.5",
+    "flowbite": "^3.1.2",
+    "flowbite-svelte": "^1.33.1",
+    "flowbite-svelte-icons": "^3.1.0",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.4"
+  }
+}

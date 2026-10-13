@@ -1,0 +1,90 @@
+name: Build Linux
+
+# Workflow reusable: membangun installer Linux (.deb, .rpm, .AppImage).
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: "Nama artifact"
+        required: true
+        type: string
+      version:
+        description: "Versi aplikasi. Kosongkan untuk memakai nilai di tauri.conf.json"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Linux x64
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Paket wajib webview Tauri; `rpm` dipakai bundler untuk target .rpm.
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Set version
+        if: inputs.version != ''
+        shell: bash
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          node -e "const fs=require('fs');for (const f of ['src-tauri/tauri.conf.json','package.json']) { const j=JSON.parse(fs.readFileSync(f,'utf8')); j.version=process.env.APP_VERSION; fs.writeFileSync(f, JSON.stringify(j,null,2)+'\n'); }"
+          echo "Versi installer: $APP_VERSION"
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build installer
+        run: pnpm tauri build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+          retention-days: 7

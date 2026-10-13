@@ -1,0 +1,84 @@
+name: Build macOS
+
+# Workflow reusable: membangun installer macOS (Apple Silicon + Intel).
+# Dipanggil oleh release.yml (rilis dari tag) atau workflow lain (mis. build PR).
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: "Nama artifact dasar; tiap arsitektur dapat suffix sendiri"
+        required: true
+        type: string
+      version:
+        description: "Versi aplikasi. Kosongkan untuk memakai nilai di tauri.conf.json"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: macOS ${{ matrix.arch }}
+    runs-on: macos-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            target: aarch64-apple-darwin
+          - arch: x64
+            target: x86_64-apple-darwin
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.target }}
+
+      - name: Set version
+        if: inputs.version != ''
+        shell: bash
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          node -e "const fs=require('fs');for (const f of ['src-tauri/tauri.conf.json','package.json']) { const j=JSON.parse(fs.readFileSync(f,'utf8')); j.version=process.env.APP_VERSION; fs.writeFileSync(f, JSON.stringify(j,null,2)+'\n'); }"
+          echo "Versi installer: $APP_VERSION"
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Bundle .app + .dmg; tanpa signing/notarization Apple, macOS akan
+      # menampilkan peringatan Gatekeeper saat installer dibuka.
+      - name: Build installer
+        run: pnpm tauri build --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}-${{ matrix.arch }}
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 7

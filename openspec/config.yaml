@@ -1,0 +1,45 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+context: |
+  Swaloka Looping Tool: desktop app for looping a background video over an audio
+  playlist, plus channel planning (EZ Loop), packaged for Windows, macOS, and Linux.
+
+  Stack: Tauri v2 with a Rust backend (src-tauri/src) and a Svelte 5 SPA (Vite,
+  Tailwind v4, Flowbite Svelte) in src.
+
+  The app provisions its own pinned FFmpeg 8.1.2 build into a per-user folder on
+  first run, downloaded from pinned per-platform sources and verified by
+  SHA-256; a system FFmpeg installation is never used.
+
+  Language: every user-facing string (labels, dialogs, toasts, log messages) is
+  Bahasa Indonesia; OpenSpec artifacts are written in English.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

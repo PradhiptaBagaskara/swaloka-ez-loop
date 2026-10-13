@@ -1,0 +1,150 @@
+@import "tailwindcss";
+@plugin "flowbite/plugin";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source "../node_modules/flowbite-svelte/dist";
+@source "../node_modules/flowbite-svelte-icons/dist";
+
+/*
+  Token warna gaya Tabler. Semua warna didefinisikan sebagai CSS variable di
+  :root lalu dipetakan lewat `@theme inline`, supaya bisa ditukar saat runtime
+  ketika kelas `.dark` dipasang di <html>.
+*/
+@theme inline {
+  --color-canvas: var(--token-canvas);
+  --color-surface: var(--token-surface);
+  --color-rail: var(--token-rail);
+  --color-input: var(--token-input);
+  --color-stage: var(--token-stage);
+  --color-text: var(--token-text);
+  --color-muted: var(--token-muted);
+  --color-faint: var(--token-faint);
+  --color-line: var(--token-line);
+  --color-line-subtle: var(--token-line-subtle);
+  --color-accent: var(--token-accent);
+  --color-accent-soft: var(--token-accent-soft);
+  --color-success: var(--token-success);
+  --color-warning: var(--token-warning);
+  --color-danger: var(--token-danger);
+  --color-info: var(--token-info);
+
+  --color-primary-50: var(--token-primary-50);
+  --color-primary-100: var(--token-primary-100);
+  --color-primary-200: var(--token-primary-200);
+  --color-primary-300: var(--token-primary-300);
+  --color-primary-400: var(--token-primary-400);
+  --color-primary-500: var(--token-primary-500);
+  --color-primary-600: var(--token-primary-600);
+  --color-primary-700: var(--token-primary-700);
+  --color-primary-800: var(--token-primary-800);
+  --color-primary-900: var(--token-primary-900);
+  --color-primary-950: var(--token-primary-950);
+
+  --radius-card: 8px;
+  --radius-field: 6px;
+}
+
+:root {
+  color-scheme: light;
+
+  --token-canvas: #f1f5f9;
+  --token-surface: #ffffff;
+  --token-rail: #ffffff;
+  --token-input: #f1f5f9;
+  --token-stage: #e6ebf1;
+  --token-text: #1d273b;
+  --token-muted: #616876;
+  --token-faint: #9aa0aa;
+  --token-line: #e6e7e9;
+  --token-line-subtle: #efeff0;
+  --token-accent: #206bc4;
+  --token-accent-soft: #e8f0fb;
+  --token-success: #2fb344;
+  --token-warning: #f59f00;
+  --token-danger: #d63939;
+  --token-info: #4299e1;
+
+  --token-primary-50: #e9f1fb;
+  --token-primary-100: #d3e3f7;
+  --token-primary-200: #a7c7ef;
+  --token-primary-300: #7babe7;
+  --token-primary-400: #4f8fdf;
+  --token-primary-500: #206bc4;
+  --token-primary-600: #1a569d;
+  --token-primary-700: #154276;
+  --token-primary-800: #0f2d4f;
+  --token-primary-900: #0a1e35;
+  --token-primary-950: #061323;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --token-canvas: #0f172a;
+  --token-surface: #151f32;
+  --token-rail: #151f32;
+  --token-input: #232e4a;
+  --token-stage: #0c0c0c;
+  --token-text: #e8eaf0;
+  --token-muted: #a8aebd;
+  --token-faint: #6e7688;
+  --token-line: #2a3654;
+  --token-line-subtle: #222c47;
+  --token-accent: #5394e8;
+  --token-accent-soft: #1c2b47;
+  --token-success: #4cc38a;
+  --token-warning: #f5b14c;
+  --token-danger: #e96a6a;
+  --token-info: #7fb6ec;
+
+  --token-primary-50: #101a2c;
+  --token-primary-100: #16243d;
+  --token-primary-200: #1d3050;
+  --token-primary-300: #24406b;
+  --token-primary-400: #2f5c9b;
+  --token-primary-500: #5394e8;
+  --token-primary-600: #6ba5ee;
+  --token-primary-700: #8abaf3;
+  --token-primary-800: #aecff8;
+  --token-primary-900: #d3e4fb;
+  --token-primary-950: #eaf2fd;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  font-size: 14px;
+}
+
+::selection {
+  background: var(--token-accent-soft);
+}
+
+/*
+  Tailwind v4 tidak lagi memberi `cursor: pointer` pada tombol, sedangkan
+  aplikasi ini dipakai dengan mouse. Dikembalikan sekali di sini supaya semua
+  kontrol yang bisa diklik juga terlihat bisa diklik.
+*/
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  input[type="checkbox"],
+  input[type="radio"],
+  summary {
+    cursor: pointer;
+  }
+}
+
+/* Scrollbar tipis bergaya Tabler. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--token-line) transparent;
+}
