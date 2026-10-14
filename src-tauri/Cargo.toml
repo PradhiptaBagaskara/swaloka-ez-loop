@@ -1,6 +1,6 @@
 [package]
 name = "swaloka"
-version = "6.0.0"
+version = "1.0.0" # x-release-please-version
 description = "Swaloka Looping Tool — desktop FFmpeg automation"
 authors = ["Swaloka"]
 edition = "2021"
