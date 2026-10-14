@@ -1,6 +1,6 @@
 //! Perintah sistem: batalkan run dan bersihkan cache.
 
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::error::AppResult;
 use crate::state::AppState;
@@ -19,6 +19,6 @@ pub fn clean_cache(state: State<'_, AppState>) -> AppResult<CacheClearResult> {
 }
 
 #[tauri::command]
-pub fn app_version() -> AppResult<String> {
-    Ok(env!("CARGO_PKG_VERSION").to_string())
+pub fn app_version(app: AppHandle) -> AppResult<String> {
+    Ok(app.package_info().version.to_string())
 }

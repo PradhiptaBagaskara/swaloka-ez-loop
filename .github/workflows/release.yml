@@ -1,52 +1,92 @@
 name: Release
 
-# Membangun installer untuk semua platform lalu mempublikasikannya ke GitHub Release.
-# - push tag `v*` / `sw-tauri-v*` : build + publish release.
-# - workflow_dispatch            : build saja (hasilnya artifact di run tersebut).
+# Rilis otomatis berbasis Release Please + installer Tauri.
+#
+# - push ke `main`  : Release Please membuat/memperbarui "Release PR" dari
+#                     Conventional Commits. Saat PR itu di-merge, tag `v<versi>`
+#                     + GitHub Release dibuat, lalu installer di ketiga platform
+#                     dibangun dan dilampirkan ke release tersebut.
+# - workflow_dispatch: build saja (tanpa publikasi); hasilnya artifact di run
+#                     tersebut. Isi input `version` untuk memaksa versi tertentu.
+#
+# Tag dikelola sepenuhnya oleh Release Please (lihat release-please-config.json
+# dan .release-please-manifest.json), jadi jangan push tag manual.
 on:
   push:
-    tags:
-      - "v*"
-      - "*-v*"
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       version:
-        description: "Versi opsional (mis. 6.1.0). Kosong = pakai nilai di tauri.conf.json"
+        description: "Versi opsional (mis. 1.1.0). Kosong = pakai versi di package.json"
         required: false
         type: string
         default: ""
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: tauri-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  release-please:
+    name: Release Please
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Buat / perbarui Release PR
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
   version:
     name: Tentukan versi
+    needs: release-please
+    if: always()
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.detect.outputs.version }}
+      tag_name: ${{ steps.detect.outputs.tag_name }}
+      publish: ${{ steps.detect.outputs.publish }}
     steps:
-      - name: Baca versi dari tag
+      - name: Baca versi & mode publikasi
         id: detect
         shell: bash
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+          RELEASE_CREATED: ${{ needs.release-please.outputs.release_created }}
         run: |
-          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            VERSION="${GITHUB_REF_NAME##*v}"
+          if [[ "$RELEASE_CREATED" == "true" ]]; then
+            VERSION="$RELEASE_VERSION"
+            TAG="$RELEASE_TAG"
+            PUBLISH=true
           else
             VERSION="$INPUT_VERSION"
+            TAG=""
+            PUBLISH=false
           fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Versi: ${VERSION:-<dari tauri.conf.json>}"
+          {
+            echo "version=$VERSION"
+            echo "tag_name=$TAG"
+            echo "publish=$PUBLISH"
+          } >> "$GITHUB_OUTPUT"
+          echo "Versi: ${VERSION:-<dari package.json>} | tag=${TAG:-<none>} | publish=$PUBLISH"
 
   build-macos:
     name: macOS
     needs: version
+    if: ${{ needs.version.outputs.publish == 'true' || github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/build-macos.yml
     with:
       artifact-name: swaloka-macos
@@ -55,6 +95,7 @@ jobs:
   build-windows:
     name: Windows
     needs: version
+    if: ${{ needs.version.outputs.publish == 'true' || github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/build-windows.yml
     with:
       artifact-name: swaloka-windows
@@ -63,6 +104,7 @@ jobs:
   build-linux:
     name: Linux
     needs: version
+    if: ${{ needs.version.outputs.publish == 'true' || github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/build-linux.yml
     with:
       artifact-name: swaloka-linux
@@ -71,7 +113,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: [version, build-macos, build-windows, build-linux]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: ${{ needs.version.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Download semua installer
@@ -80,11 +122,7 @@ jobs:
           path: installers
           merge-multiple: true
 
-      - name: Publikasikan release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Swaloka ${{ needs.version.outputs.version }}
-          files: installers/**/*
-          fail_on_unmatched_files: true
-          draft: false
-          generate_release_notes: true
+      - name: Lampirkan installer ke release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.version.outputs.tag_name }}" installers/* --clobber

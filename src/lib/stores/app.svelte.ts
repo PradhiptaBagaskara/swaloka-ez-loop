@@ -33,7 +33,7 @@ export const DEFAULT_PREFS: Preferences = {
 class AppStore {
   project = $state<Project | null>(null);
   prefs = $state<Preferences>({ ...DEFAULT_PREFS });
-  version = $state("6.0.0");
+  version = $state("");
   view = $state<ViewKey>("dashboard");
   ffmpegReady = $state(false);
   ffmpegChecked = $state(false);
