@@ -46,8 +46,8 @@
       <p class="text-3xl" aria-hidden="true">⚠</p>
       <h1 class="mt-3 text-xl font-semibold text-text">FFmpeg belum terpasang</h1>
       <p class="mt-2 text-sm text-muted">
-        Swaloka memakai FFmpeg bawaannya sendiri (v{setup.status?.pinnedVersion ?? "8.1.2"})
-        supaya hasilnya sama di setiap komputer.
+        Swaloka memakai FFmpeg (v{setup.status?.pinnedVersion ?? "8.1.2"})
+
       </p>
       {#if app.ffmpegSource === "custom"}
         <p class="mt-2 text-xs text-danger">
