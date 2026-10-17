@@ -29,6 +29,9 @@ Release Please already owns the version in `package.json`, `src-tauri/Cargo.toml
   files under the least common ancestor of its path patterns (`macos/`, `nsis/`, `appimage/`, ...),
   so they are not at the artifact root — so the updater file pairs with its `.sig`. Also rename the
   arch-less macOS tarball so arm64 and x64 do not collide on the release.
+- Address each asset the way GitHub names it, not the way it is named on disk: the spaces in the
+  product name become dots (`Swaloka EZ Loop_arm64.app.tar.gz` is served as
+  `Swaloka.EZ.Loop_arm64.app.tar.gz`), so the manifest URL is built from the sanitized name.
 - Leave the version entirely to Release Please: the build workflows no longer set it before
   building, and the now-redundant `scripts/set-version.mjs` is removed.
 
