@@ -69,13 +69,16 @@ jobs:
         env:
           APP_VERSION: ${{ inputs.version }}
         run: |
-          node -e "const fs=require('fs');for (const f of ['src-tauri/tauri.conf.json','package.json']) { const j=JSON.parse(fs.readFileSync(f,'utf8')); j.version=process.env.APP_VERSION; fs.writeFileSync(f, JSON.stringify(j,null,2)+'\n'); }"
+          node scripts/set-version.mjs "$APP_VERSION"
           echo "Versi installer: $APP_VERSION"
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm tauri build
 
       - name: Upload artifact
@@ -86,5 +89,6 @@ jobs:
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/rpm/*.rpm
             src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/appimage/*.AppImage.sig
           if-no-files-found: error
           retention-days: 7

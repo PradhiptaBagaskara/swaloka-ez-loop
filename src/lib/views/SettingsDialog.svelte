@@ -5,6 +5,7 @@
   import { api, errorMessage, type EncoderOption } from "$lib/api";
   import { pickDirectory, pickFile } from "$lib/picker";
   import { app } from "$lib/stores/app.svelte";
+  import { update } from "$lib/stores/update.svelte";
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
@@ -147,6 +148,23 @@
         </div>
       </div>
     {/if}
+
+    <div class="border-t border-line pt-4">
+      <p class={labelClass}>Pembaruan</p>
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm text-muted">
+          Versi terpasang <span class="font-medium text-text">{app.version}</span>
+        </p>
+        <button
+          type="button"
+          class="shrink-0 rounded-field border border-line px-3 py-2 text-sm text-text transition hover:bg-canvas disabled:opacity-50"
+          disabled={update.checking}
+          onclick={() => update.check(true)}
+        >
+          {update.checking ? "Memeriksa..." : "Periksa pembaruan"}
+        </button>
+      </div>
+    </div>
   </div>
 
   {#snippet footer()}

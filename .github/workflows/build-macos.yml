@@ -64,21 +64,42 @@ jobs:
         env:
           APP_VERSION: ${{ inputs.version }}
         run: |
-          node -e "const fs=require('fs');for (const f of ['src-tauri/tauri.conf.json','package.json']) { const j=JSON.parse(fs.readFileSync(f,'utf8')); j.version=process.env.APP_VERSION; fs.writeFileSync(f, JSON.stringify(j,null,2)+'\n'); }"
+          node scripts/set-version.mjs "$APP_VERSION"
           echo "Versi installer: $APP_VERSION"
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      # Bundle .app + .dmg; tanpa signing/notarization Apple, macOS akan
-      # menampilkan peringatan Gatekeeper saat installer dibuka.
+      # Bundle .app + .dmg. Signing bersifat ad-hoc (signingIdentity "-") agar
+      # app di Apple Silicon tidak dianggap rusak; tanpa notarization, Gatekeeper
+      # tetap meminta izin saat pertama dibuka. Kunci privat menandatangani
+      # artifact updater (.app.tar.gz.sig).
       - name: Build installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm tauri build --target ${{ matrix.target }}
+
+      # Nama bawaan `.app.tar.gz` tidak memuat arsitektur, jadi arm64 dan x64
+      # akan saling menimpa saat diunggah ke release yang sama. Tambahkan suffiks
+      # arsitektur; berkas `.sig` ikut berganti nama agar tetap berpasangan.
+      - name: Rename updater artifact
+        shell: bash
+        run: |
+          dir="src-tauri/target/${{ matrix.target }}/release/bundle/macos"
+          for f in "$dir"/*.app.tar.gz; do
+            base="${f%.app.tar.gz}"
+            mv "$f" "${base}_${{ matrix.arch }}.app.tar.gz"
+            mv "$f.sig" "${base}_${{ matrix.arch }}.app.tar.gz.sig"
+          done
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifact-name }}-${{ matrix.arch }}
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz.sig
           if-no-files-found: error
           retention-days: 7

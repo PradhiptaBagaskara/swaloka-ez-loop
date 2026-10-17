@@ -8,6 +8,8 @@
     "core:window:allow-close",
     "core:window:allow-start-dragging",
     "dialog:default",
+    "updater:default",
+    "process:default",
     "opener:default",
     "opener:allow-reveal-item-in-dir",
     {

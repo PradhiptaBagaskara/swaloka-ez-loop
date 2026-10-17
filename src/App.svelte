@@ -3,12 +3,14 @@
 
   import Shell from "$lib/components/shell/Shell.svelte";
   import { app } from "$lib/stores/app.svelte";
+  import { update } from "$lib/stores/update.svelte";
   import FfmpegGuide from "$lib/views/FfmpegGuide.svelte";
   import Landing from "$lib/views/Landing.svelte";
   import SettingsDialog from "$lib/views/SettingsDialog.svelte";
+  import UpdateDialog from "$lib/views/UpdateDialog.svelte";
 
   onMount(() => {
-    void app.bootstrap();
+    void app.bootstrap().then(() => update.check());
   });
 
   const toastClass = $derived(
@@ -31,6 +33,7 @@
 {/if}
 
 <SettingsDialog bind:open={app.settingsOpen} />
+<UpdateDialog />
 
 {#if app.toast}
   <div
