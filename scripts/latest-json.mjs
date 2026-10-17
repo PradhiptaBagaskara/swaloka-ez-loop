@@ -6,9 +6,12 @@
 //   node scripts/latest-json.mjs
 //
 // Dipakai oleh workflow release: tiap artifact build tersimpan di subfolder
-// sendiri (mis. `swaloka-macos-arm64`). Skrip ini mengambil berkas updater
-// beserta berkas `.sig` pasangannya, lalu menulis manifest yang menunjuk ke
-// aset GitHub Release.
+// sendiri (mis. `swaloka-macos-arm64`). Di dalamnya berkas masih terbagi per
+// folder bundler (`macos/`, `nsis/`, `appimage/`, ...) karena upload-artifact
+// menyimpan berkas pada leluhur bersama dari semua pola path-nya, jadi berkas
+// updater dicari secara rekursif. Skrip ini mengambil berkas updater beserta
+// berkas `.sig` pasangannya, lalu menulis manifest yang menunjuk ke aset
+// GitHub Release.
 //
 // Manifest sengaja gagal keras bila ada platform yang artifact updater-nya
 // tidak ketemu: Tauri memvalidasi seluruh berkas sebelum membaca field versi,
@@ -35,6 +38,14 @@ const PLATFORMS = [
   { key: "linux-x86_64", slug: "linux-x64", match: (name) => name.endsWith(".AppImage") }
 ];
 
+/// Semua berkas di bawah `dir`, rekursif.
+function listFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    return entry.isDirectory() ? listFiles(path) : [path];
+  });
+}
+
 const subdirs = readdirSync(artifactsDir, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name);
@@ -44,17 +55,18 @@ const missing = [];
 
 for (const { key, slug, match } of PLATFORMS) {
   const subdir = subdirs.find((name) => name.includes(slug));
-  const files = subdir
-    ? readdirSync(join(artifactsDir, subdir)).filter((name) => !name.endsWith(".sig"))
-    : [];
-  const file = files.find(match);
+  const file = subdir
+    ? listFiles(join(artifactsDir, subdir)).find(
+        (path) => !path.endsWith(".sig") && match(basename(path))
+      )
+    : undefined;
 
   if (!subdir || !file) {
     missing.push(key);
     continue;
   }
 
-  const signature = readFileSync(join(artifactsDir, subdir, `${file}.sig`), "utf8").trim();
+  const signature = readFileSync(`${file}.sig`, "utf8").trim();
   platforms[key] = { signature, url: `${baseUrl}/${encodeURIComponent(basename(file))}` };
 }
 
