@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.1.0...v1.1.1) (2026-10-17)
+
+
+### Bug Fixes
+
+* **ci:** biarkan Release Please jadi satu-satunya pemilik versi ([fcacd65](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/fcacd651d11d11a22f68dc4db2eaa97c703f3b9d))
+* **ci:** biarkan Release Please jadi satu-satunya pemilik versi ([82cf744](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/82cf74471d799137f0fde7f383eed44c7dcb42af))
+
 ## [1.1.0](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.0.0...v1.1.0) (2026-10-17)
 
 
