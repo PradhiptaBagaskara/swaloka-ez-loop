@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.1.1...v1.1.2) (2026-10-17)
+
+
+### Bug Fixes
+
+* **updater:** cari berkas updater secara rekursif di dalam artifact ([9125e6f](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/9125e6fc34db691f0cd6013f38eccac42278875f))
+* **updater:** cari berkas updater secara rekursif di dalam artifact ([5b5188c](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/5b5188cd4d6c1f15f5250754a653cb345146fbb2))
+
 ## [1.1.1](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.1.0...v1.1.1) (2026-10-17)
 
 
