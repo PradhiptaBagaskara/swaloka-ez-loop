@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.1.2...v1.1.3) (2026-10-17)
+
+
+### Bug Fixes
+
+* **updater:** pakai nama aset GitHub pada URL manifest ([5e3bdff](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/5e3bdffaa6841cc791000f54c1024eaca8095cb8))
+* **updater:** pakai nama aset GitHub pada URL manifest ([452466d](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/452466da7af5c11d3bfcfb3cbfa22b067a17b831))
+
 ## [1.1.2](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.1.1...v1.1.2) (2026-10-17)
 
 
