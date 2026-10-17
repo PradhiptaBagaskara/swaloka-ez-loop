@@ -21,6 +21,7 @@
 - [x] 3.3 In `release.yml`, pass secrets to the build workflows, name the Windows/Linux artifacts with the `-x64` slug, and make the publish job generate `latest.json` and upload every artifact plus the manifest.
 - [x] 3.4 Add the `pack:unsigned` script and `src-tauri/tauri.unsigned.conf.json` so local builds work without the private key.
 - [x] 3.5 Remove the manual version plumbing — the `Set version` step, the `version` inputs, and `scripts/set-version.mjs` — since Release Please already bumps every version file in the Release PR. Running `Set version` over an already-bumped version failed the 1.1.0 release build.
+- [x] 3.6 Make `latest-json.mjs` find the updater file recursively inside each artifact folder: `upload-artifact` stores files under the least common ancestor of its path patterns, so they sit in `macos/`, `nsis/`, `appimage/`, and friends rather than at the artifact root. Verified against the real 1.1.1 artifacts — the manifest's signatures match their `.sig` files byte for byte.
 
 ## 4. Verification
 

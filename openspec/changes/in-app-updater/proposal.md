@@ -25,8 +25,10 @@ Release Please already owns the version in `package.json`, `src-tauri/Cargo.toml
 - Surface updates in the app: a check on startup that opens a dialog (version, release notes,
   progress, "Nanti"/"Perbarui"), plus a manual "Periksa pembaruan" action in settings.
 - Build the manifest in the publish job from the per-platform artifacts, keeping each artifact in
-  its own folder so the updater file pairs with its `.sig`, and rename the arch-less macOS tarball
-  so arm64 and x64 do not collide on the release.
+  its own folder and finding the updater file recursively inside it — `upload-artifact` nests the
+  files under the least common ancestor of its path patterns (`macos/`, `nsis/`, `appimage/`, ...),
+  so they are not at the artifact root — so the updater file pairs with its `.sig`. Also rename the
+  arch-less macOS tarball so arm64 and x64 do not collide on the release.
 - Leave the version entirely to Release Please: the build workflows no longer set it before
   building, and the now-redundant `scripts/set-version.mjs` is removed.
 
