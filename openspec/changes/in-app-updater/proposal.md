@@ -3,11 +3,12 @@
 ## Why
 
 Swaloka publishes installers to GitHub Releases, but there is no way to get a new version to
-someone who already installed the app: the updater helper (`src/lib/updater.ts`), the manifest
-script (`scripts/latest-json.mjs`), and the version script (`scripts/set-version.mjs`) all exist
-but nothing wires them together. The updater plugin is not installed, `latest.json` is never
-produced or uploaded, and macOS bundles are unsigned so Apple Silicon refuses to launch a
-downloaded bundle. Every release has to be installed by hand.
+someone who already installed the app: the updater helper (`src/lib/updater.ts`) and the manifest
+script (`scripts/latest-json.mjs`) exist but nothing wires them together. The updater plugin is
+not installed, `latest.json` is never produced or uploaded, and macOS bundles are unsigned so
+Apple Silicon refuses to launch a downloaded bundle. Every release has to be installed by hand.
+Release Please already owns the version in `package.json`, `src-tauri/Cargo.toml`, and
+`src-tauri/tauri.conf.json`, so the build workflows must not set it a second time.
 
 ## What Changes
 
@@ -26,6 +27,8 @@ downloaded bundle. Every release has to be installed by hand.
 - Build the manifest in the publish job from the per-platform artifacts, keeping each artifact in
   its own folder so the updater file pairs with its `.sig`, and rename the arch-less macOS tarball
   so arm64 and x64 do not collide on the release.
+- Leave the version entirely to Release Please: the build workflows no longer set it before
+  building, and the now-redundant `scripts/set-version.mjs` is removed.
 
 ## Capabilities
 
@@ -43,7 +46,9 @@ downloaded bundle. Every release has to be installed by hand.
   `views/UpdateDialog.svelte`; wiring in `App.svelte` and `views/SettingsDialog.svelte`.
 - **CI**: `build-{macos,windows,linux}.yml` sign the updater artifacts and upload the `.sig` files;
   `release.yml` passes secrets to the build workflows, names the Windows/Linux artifacts with the
-  `-x64` slug, and generates and uploads `latest.json`.
+  `-x64` slug, and generates and uploads `latest.json`. The manual version plumbing — the
+  `Set version` step, the `version` inputs, and `scripts/set-version.mjs` — is removed, so Release
+  Please is the single owner of the version.
 - **Secrets**: `TAURI_SIGNING_PRIVATE_KEY` (and optional `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`) must
   exist as repository secrets; the minisign private key is never committed.
 - **Local builds**: with `createUpdaterArtifacts` enabled, `tauri build` fails without the private

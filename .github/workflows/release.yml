@@ -7,7 +7,11 @@ name: Release
 #                     + GitHub Release dibuat, lalu installer di ketiga platform
 #                     dibangun dan dilampirkan ke release tersebut.
 # - workflow_dispatch: build saja (tanpa publikasi); hasilnya artifact di run
-#                     tersebut. Isi input `version` untuk memaksa versi tertentu.
+#                     tersebut.
+#
+# Versi sepenuhnya milik Release Please: ia menaikkan version di package.json
+# dan src-tauri/Cargo.toml (via extra-files) di Release PR, dan tauri.conf.json
+# mengikuti package.json. Tidak ada langkah yang menyetel versi di workflow ini.
 #
 # Tag dikelola sepenuhnya oleh Release Please (lihat release-please-config.json
 # dan .release-please-manifest.json), jadi jangan push tag manual.
@@ -16,12 +20,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Versi opsional (mis. 1.1.0). Kosong = pakai versi di package.json"
-        required: false
-        type: string
-        default: ""
 
 permissions:
   contents: write
@@ -49,7 +47,7 @@ jobs:
           manifest-file: .release-please-manifest.json
 
   version:
-    name: Tentukan versi
+    name: Tentukan mode publikasi
     needs: release-please
     if: always()
     runs-on: ubuntu-latest
@@ -58,30 +56,20 @@ jobs:
       tag_name: ${{ steps.detect.outputs.tag_name }}
       publish: ${{ steps.detect.outputs.publish }}
     steps:
-      - name: Baca versi & mode publikasi
+      - name: Baca status rilis
         id: detect
         shell: bash
         env:
-          INPUT_VERSION: ${{ inputs.version }}
           RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
           RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
           RELEASE_CREATED: ${{ needs.release-please.outputs.release_created }}
         run: |
-          if [[ "$RELEASE_CREATED" == "true" ]]; then
-            VERSION="$RELEASE_VERSION"
-            TAG="$RELEASE_TAG"
-            PUBLISH=true
-          else
-            VERSION="$INPUT_VERSION"
-            TAG=""
-            PUBLISH=false
-          fi
           {
-            echo "version=$VERSION"
-            echo "tag_name=$TAG"
-            echo "publish=$PUBLISH"
+            echo "version=$RELEASE_VERSION"
+            echo "tag_name=$RELEASE_TAG"
+            echo "publish=$RELEASE_CREATED"
           } >> "$GITHUB_OUTPUT"
-          echo "Versi: ${VERSION:-<dari package.json>} | tag=${TAG:-<none>} | publish=$PUBLISH"
+          echo "Versi: ${RELEASE_VERSION:-<none>} | tag=${RELEASE_TAG:-<none>} | publish=${RELEASE_CREATED:-false}"
 
   build-macos:
     name: macOS
@@ -91,7 +79,6 @@ jobs:
     secrets: inherit
     with:
       artifact-name: swaloka-macos
-      version: ${{ needs.version.outputs.version }}
 
   build-windows:
     name: Windows
@@ -101,7 +88,6 @@ jobs:
     secrets: inherit
     with:
       artifact-name: swaloka-windows-x64
-      version: ${{ needs.version.outputs.version }}
 
   build-linux:
     name: Linux
@@ -111,7 +97,6 @@ jobs:
     secrets: inherit
     with:
       artifact-name: swaloka-linux-x64
-      version: ${{ needs.version.outputs.version }}
 
   publish:
     name: Publish GitHub Release

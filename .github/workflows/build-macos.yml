@@ -9,11 +9,6 @@ on:
         description: "Nama artifact dasar; tiap arsitektur dapat suffix sendiri"
         required: true
         type: string
-      version:
-        description: "Versi aplikasi. Kosongkan untuk memakai nilai di tauri.conf.json"
-        required: false
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -57,15 +52,6 @@ jobs:
         with:
           workspaces: src-tauri -> target
           key: ${{ matrix.target }}
-
-      - name: Set version
-        if: inputs.version != ''
-        shell: bash
-        env:
-          APP_VERSION: ${{ inputs.version }}
-        run: |
-          node scripts/set-version.mjs "$APP_VERSION"
-          echo "Versi installer: $APP_VERSION"
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
