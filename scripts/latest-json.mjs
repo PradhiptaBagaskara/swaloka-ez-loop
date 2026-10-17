@@ -16,6 +16,13 @@
 // Manifest sengaja gagal keras bila ada platform yang artifact updater-nya
 // tidak ketemu: Tauri memvalidasi seluruh berkas sebelum membaca field versi,
 // jadi satu entri yang cacat membuat semua platform gagal diperbarui.
+//
+// URL di manifest memakai nama aset Release, yang BUKAN nama berkas lokal:
+// GitHub mengganti setiap karakter di luar `[A-Za-z0-9._-]` menjadi titik, dan
+// yang paling sering kena adalah spasi pada `productName` Tauri
+// (`Swaloka EZ Loop_1.1.2_aarch64.dmg` tersimpan sebagai
+// `Swaloka.EZ.Loop_1.1.2_aarch64.dmg`). Memakai nama lokal apa adanya membuat
+// unduhan 404 meski versinya terdeteksi.
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -46,6 +53,11 @@ function listFiles(dir) {
   });
 }
 
+/// Nama aset Release untuk sebuah berkas lokal: sama dengan perilaku GitHub.
+function assetName(file) {
+  return basename(file).replace(/[^A-Za-z0-9._-]/g, ".");
+}
+
 const subdirs = readdirSync(artifactsDir, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name);
@@ -67,7 +79,7 @@ for (const { key, slug, match } of PLATFORMS) {
   }
 
   const signature = readFileSync(`${file}.sig`, "utf8").trim();
-  platforms[key] = { signature, url: `${baseUrl}/${encodeURIComponent(basename(file))}` };
+  platforms[key] = { signature, url: `${baseUrl}/${assetName(file)}` };
 }
 
 if (missing.length > 0) {
