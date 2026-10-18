@@ -72,6 +72,7 @@ pub fn channel_create(state: State<'_, AppState>, input: ChannelCreateInput) -> 
         channel.min_duration_minutes = input.min_duration_minutes;
     }
     workspace.channel_repository.save(&channel)?;
+    state.telemetry.notify_data("channels");
     Ok(channel)
 }
 
@@ -81,24 +82,27 @@ pub fn channel_save(state: State<'_, AppState>, channel: Channel) -> AppResult<C
     let mut channel = channel;
     channel.touch();
     workspace.channel_repository.save(&channel)?;
+    state.telemetry.notify_data("channels");
     Ok(channel)
 }
 
 #[tauri::command]
 pub fn channel_delete(state: State<'_, AppState>, channel_id: String) -> AppResult<()> {
     state.workspace()?.channel_repository.delete(&channel_id)?;
+    state.telemetry.notify_data("channels");
     Ok(())
 }
 
 /// Deteksi ulang aset channel lalu susun rencananya.
 #[tauri::command]
 pub async fn channel_plan(state: State<'_, AppState>, channel: Channel) -> AppResult<Channel> {
-    state.start_run()?;
+    state.start_run("Menyusun rencana")?;
     let workspace = state.workspace();
     let result = match workspace {
         Ok(workspace) => match workspace.channel_planner.plan(&channel).await {
             Ok(planned) => {
                 workspace.channel_repository.save(&planned)?;
+                state.telemetry.notify_data("channels");
                 Ok(planned)
             }
             Err(error) => Err(error),
@@ -116,6 +120,7 @@ pub fn channel_rescan_videos(state: State<'_, AppState>, channel: Channel) -> Ap
     let refreshed = workspace.channel_detector.rescan_videos(&channel);
     let assigned = ChannelPlanner::assign_waiting_videos(&refreshed);
     workspace.channel_repository.save(&assigned)?;
+    state.telemetry.notify_data("channels");
     Ok(assigned)
 }
 
@@ -132,7 +137,7 @@ pub async fn channel_preflight(
 /// Proses rencana terpilih satu per satu.
 #[tauri::command]
 pub async fn channel_run(state: State<'_, AppState>, channel: Channel) -> AppResult<Channel> {
-    state.start_run()?;
+    state.start_run("Memproses konten")?;
     let workspace = state.workspace();
     let result = match workspace {
         Ok(workspace) => {
@@ -146,6 +151,7 @@ pub async fn channel_run(state: State<'_, AppState>, channel: Channel) -> AppRes
         }
         Err(error) => Err(error),
     };
+    state.telemetry.notify_data("channels");
     state.finish_run("channel_run");
     result
 }

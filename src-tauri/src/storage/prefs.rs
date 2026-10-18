@@ -21,10 +21,18 @@ pub struct Preferences {
     pub last_project_path: Option<String>,
     #[serde(default)]
     pub recent_projects: Vec<String>,
+    /// Port loopback Kontrol AI (MCP). Server sendiri tidak dinyalakan otomatis
+    /// saat aplikasi dibuka; pengguna yang mengaktifkannya tiap sesi.
+    #[serde(default = "default_mcp_port")]
+    pub mcp_port: u16,
 }
 
 fn default_theme() -> String {
     String::from("light")
+}
+
+fn default_mcp_port() -> u16 {
+    crate::mcp::DEFAULT_PORT
 }
 
 impl Default for Preferences {
@@ -35,6 +43,7 @@ impl Default for Preferences {
             hw_encoder: None,
             last_project_path: None,
             recent_projects: Vec::new(),
+            mcp_port: default_mcp_port(),
         }
     }
 }

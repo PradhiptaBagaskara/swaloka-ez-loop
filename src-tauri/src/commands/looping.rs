@@ -8,7 +8,7 @@ use crate::state::AppState;
 
 #[tauri::command]
 pub async fn loop_run(state: State<'_, AppState>, request: LoopRequest) -> AppResult<LoopResult> {
-    state.start_run()?;
+    state.start_run("Menggabungkan konten")?;
     let workspace = state.workspace();
     let result = match workspace {
         Ok(workspace) => {

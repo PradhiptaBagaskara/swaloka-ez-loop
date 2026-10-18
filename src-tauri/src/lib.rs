@@ -8,6 +8,7 @@ pub mod commands;
 pub mod core;
 pub mod error;
 pub mod features;
+pub mod mcp;
 pub mod state;
 pub mod storage;
 
@@ -15,7 +16,7 @@ use state::AppState;
 use tauri::Manager;
 
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
@@ -64,7 +65,20 @@ pub fn run() {
             commands::system::cancel_run,
             commands::system::clean_cache,
             commands::system::app_version,
+            commands::system::app_exe_path,
+            commands::mcp::mcp_status,
+            commands::mcp::mcp_start,
+            commands::mcp::mcp_stop,
         ])
-        .run(tauri::generate_context!())
-        .expect("gagal menjalankan aplikasi Tauri");
+        .build(tauri::generate_context!())
+        .expect("gagal menyiapkan aplikasi Tauri");
+
+    app.run(|app_handle, event| {
+        // Bersihkan file runtime MCP saat aplikasi keluar normal, supaya tidak
+        // meninggalkan port/token basi. Kasus tutup paksa ditangani saat startup
+        // berikutnya (lihat `AppState::new`).
+        if let tauri::RunEvent::Exit = event {
+            app_handle.state::<AppState>().mcp.stop();
+        }
+    });
 }

@@ -459,19 +459,24 @@ mod tests {
 
     #[test]
     fn output_folder_and_name_are_sane() {
+        // Susun harapan lewat `Path::join` supaya separator mengikuti platform.
+        let expected = |name: &str| {
+            Path::new("/p/outputs")
+                .join(name)
+                .to_string_lossy()
+                .into_owned()
+        };
+
         let value = channel(Vec::new());
-        assert_eq!(
-            channel_output_dir(&value),
-            "/p/outputs/Lounge Daily".to_string()
-        );
+        assert_eq!(channel_output_dir(&value), expected("Lounge Daily"));
 
         let mut nasty = channel(Vec::new());
         nasty.name = String::from("  Channel: A/B?  ");
-        assert_eq!(channel_output_dir(&nasty), "/p/outputs/Channel_ A_B_");
+        assert_eq!(channel_output_dir(&nasty), expected("Channel_ A_B_"));
 
         let mut empty = channel(Vec::new());
         empty.name = String::from("   ");
-        assert_eq!(channel_output_dir(&empty), "/p/outputs/channel");
+        assert_eq!(channel_output_dir(&empty), expected("channel"));
 
         assert_eq!(
             output_name_for(&plan("plan_1", 0, ChannelPlanStatus::NotProcessed, true)),

@@ -3,6 +3,7 @@
 
   import { api, errorMessage } from "$lib/api";
   import { app } from "$lib/stores/app.svelte";
+  import AiControl from "$lib/views/AiControl.svelte";
   import Channel from "$lib/views/Channel.svelte";
   import Dashboard from "$lib/views/Dashboard.svelte";
   import Looping from "$lib/views/Looping.svelte";
@@ -49,8 +50,10 @@
           <Channel />
         {:else if app.view === "looping"}
           <Looping />
-        {:else}
+        {:else if app.view === "media"}
           <MediaTools />
+        {:else}
+          <AiControl />
         {/if}
       </div>
     </main>

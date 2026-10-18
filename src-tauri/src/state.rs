@@ -19,11 +19,24 @@ use crate::features::channel::{
 use crate::features::looping::{AudioNormalizer, LoopMergeService};
 use crate::features::media_tools::{AudioToolsService, VideoToolsService};
 use crate::features::ProgressCallback;
+use crate::mcp::McpServer;
 use crate::storage::cache::AudioCache;
 use crate::storage::migration::LegacyMigrator;
 use crate::storage::prefs::{Preferences, PreferencesStore};
 use crate::storage::project::{Project, ProjectStore};
 use crate::storage::temp::TempManager;
+
+/// Muatan event `task://started`.
+#[derive(Clone, Serialize)]
+pub struct RunStarted {
+    pub label: String,
+}
+
+/// Muatan event `data://changed`.
+#[derive(Clone, Serialize)]
+pub struct DataChanged {
+    pub scope: String,
+}
 
 /// Service yang aktif selama sebuah proyek terbuka.
 pub struct Workspace {
@@ -43,6 +56,7 @@ pub struct Workspace {
 pub struct Telemetry {
     app: AppHandle,
     logs: Mutex<Vec<LogRecord>>,
+    progress: Mutex<f64>,
     running: AtomicBool,
 }
 
@@ -51,6 +65,7 @@ impl Telemetry {
         Self {
             app,
             logs: Mutex::new(Vec::new()),
+            progress: Mutex::new(0.0),
             running: AtomicBool::new(false),
         }
     }
@@ -70,10 +85,15 @@ impl Telemetry {
         })
     }
 
-    /// Callback progres yang memancarkan nilai 0.0..1.0 ke frontend.
+    /// Callback progres yang menyimpan nilai terakhir lalu memancarkannya ke
+    /// frontend. Nilai tersimpan dipakai pembaca non-UI seperti server MCP.
     pub fn progress_callback(self: &Arc<Self>) -> ProgressCallback {
         let telemetry = Arc::clone(self);
         Arc::new(move |value: f64| {
+            *telemetry
+                .progress
+                .lock()
+                .unwrap_or_else(|error| error.into_inner()) = value;
             let _ = telemetry.app.emit("task://progress", value);
         })
     }
@@ -92,6 +112,10 @@ impl Telemetry {
 
     pub fn begin_run(&self) {
         self.running.store(true, Ordering::SeqCst);
+        *self
+            .progress
+            .lock()
+            .unwrap_or_else(|error| error.into_inner()) = 0.0;
         self.logs
             .lock()
             .unwrap_or_else(|error| error.into_inner())
@@ -121,6 +145,48 @@ impl Telemetry {
             .lock()
             .unwrap_or_else(|error| error.into_inner())
             .clear();
+    }
+
+    /// Progres run terakhir (0.0..1.0), untuk pembaca non-UI seperti MCP.
+    pub fn current_progress(&self) -> f64 {
+        *self
+            .progress
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+    }
+
+    /// `limit` record log terbaru, untuk pembaca non-UI seperti MCP.
+    pub fn recent_logs(&self, limit: usize) -> Vec<LogRecord> {
+        let logs = self.logs.lock().unwrap_or_else(|error| error.into_inner());
+        let start = logs.len().saturating_sub(limit);
+        logs[start..].to_vec()
+    }
+
+    /// Beri tahu antarmuka bahwa sebuah run dimulai — termasuk run yang dimulai
+    /// dari luar antarmuka, mis. lewat server MCP, supaya queue card ikut tampil.
+    pub fn notify_started(&self, label: &str) {
+        let _ = self.app.emit(
+            "task://started",
+            RunStarted {
+                label: label.to_string(),
+            },
+        );
+    }
+
+    /// Beri tahu antarmuka bahwa run terakhir selesai.
+    pub fn notify_finished(&self) {
+        let _ = self.app.emit("task://finished", ());
+    }
+
+    /// Beri tahu antarmuka bahwa data domain (`channels`/`project`/`prefs`)
+    /// berubah di luar dirinya, supaya tampilan yang relevan memuat ulang.
+    pub fn notify_data(&self, scope: &str) {
+        let _ = self.app.emit(
+            "data://changed",
+            DataChanged {
+                scope: scope.to_string(),
+            },
+        );
     }
 }
 
@@ -158,11 +224,19 @@ pub struct AppState {
     pub metadata: Arc<MetadataReader>,
     /// Penjaga pemasangan FFmpeg dari layar setup (unduhan berprogres).
     pub installer: Installer,
+    /// Server MCP (Kontrol AI): dibagikan dengan antarmuka, mati kecuali bila
+    /// diaktifkan pengguna.
+    pub mcp: Arc<McpServer>,
     bundled_dirs: Vec<String>,
 }
 
 impl AppState {
     pub fn new(app: AppHandle) -> Self {
+        // Sisa file runtime MCP dari sesi sebelumnya (app ditutup paksa atau
+        // di-crash) dibuang supaya tidak ada port/token basi yang menyesatkan
+        // jembatan stdio. Server tidak menyala otomatis, jadi file ini memang
+        // belum seharusnya ada saat aplikasi baru mulai.
+        let _ = std::fs::remove_file(crate::storage::paths::mcp_runtime_file());
         let prefs_store = PreferencesStore::new(None);
         let prefs = prefs_store.load();
         let bundled_dirs = bundled_ffmpeg_dirs(&app);
@@ -171,7 +245,7 @@ impl AppState {
         let ffmpeg = locator.resolve_ffmpeg();
         let ffprobe = locator.resolve_ffprobe(Some(&ffmpeg));
         Self {
-            telemetry: Arc::new(Telemetry::new(app)),
+            telemetry: Arc::new(Telemetry::new(app.clone())),
             prefs_store,
             prefs: Mutex::new(prefs),
             project: Mutex::new(None),
@@ -179,6 +253,7 @@ impl AppState {
             runner: Arc::new(FFmpegRunner::new(ffmpeg, Some(ffprobe))),
             metadata: Arc::new(MetadataReader::new(true)),
             installer: Installer::default(),
+            mcp: Arc::new(McpServer::new(app)),
             bundled_dirs,
         }
     }
@@ -302,6 +377,7 @@ impl AppState {
             .unwrap_or_else(|error| error.into_inner()) = Some(workspace);
 
         self.update_prefs(|prefs| prefs.add_recent(&project.root_path));
+        self.telemetry.notify_data("project");
         Ok(project)
     }
 
@@ -320,6 +396,7 @@ impl AppState {
             .project
             .lock()
             .unwrap_or_else(|error| error.into_inner()) = None;
+        self.telemetry.notify_data("project");
     }
 
     /// Locator FFmpeg dari preferensi saat ini plus folder bawaan aplikasi.
@@ -344,22 +421,27 @@ impl AppState {
         true
     }
 
-    /// Mulai sebuah run; tolak bila masih ada run lain yang berjalan.
-    pub fn start_run(&self) -> AppResult<()> {
+    /// Mulai sebuah run; tolak bila masih ada run lain yang berjalan. `label`
+    /// ikut dipancarkan supaya antarmuka bisa menampilkan run yang bukan
+    /// dimulainya sendiri (mis. dari server MCP).
+    pub fn start_run(&self, label: &str) -> AppResult<()> {
         if self.telemetry.is_running() {
             return Err(AppError::new("Ada proses lain yang sedang berjalan"));
         }
         self.telemetry.begin_run();
+        self.telemetry.notify_started(label);
         Ok(())
     }
 
-    /// Selesaikan run: tulis log ke proyek, bersihkan buffer, lepas flag.
+    /// Selesaikan run: tulis log ke proyek, bersihkan buffer, lepas flag, lalu
+    /// beri tahu antarmuka bahwa run sudah berakhir.
     pub fn finish_run(&self, base_name: &str) {
         if let Some(project) = self.project() {
             self.telemetry.write_log(&project.logs_dir(), base_name);
         }
         self.telemetry.clear_logs();
         self.telemetry.end_run();
+        self.telemetry.notify_finished();
     }
 }
 

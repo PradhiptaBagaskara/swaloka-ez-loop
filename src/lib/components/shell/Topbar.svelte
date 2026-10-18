@@ -2,6 +2,7 @@
   import { openPath } from "@tauri-apps/plugin-opener";
 
   import { app } from "$lib/stores/app.svelte";
+  import { mcp } from "$lib/stores/mcp.svelte";
 
   async function openRoot() {
     if (app.project) {
@@ -31,6 +32,15 @@
   </div>
 
   <div class="flex-1"></div>
+
+  {#if mcp.running}
+    <span
+      class="rounded-field border border-accent px-2.5 py-1.5 text-xs font-medium text-accent"
+      title={mcp.endpoint ?? "Kontrol AI aktif"}
+    >
+      Kontrol AI aktif
+    </span>
+  {/if}
 
   <button
     type="button"

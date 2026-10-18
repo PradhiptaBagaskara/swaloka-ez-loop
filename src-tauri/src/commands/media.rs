@@ -12,7 +12,7 @@ pub async fn media_encode_live(
     state: State<'_, AppState>,
     options: LiveStandardOptions,
 ) -> AppResult<Option<String>> {
-    state.start_run()?;
+    state.start_run("Meng-encode video")?;
     let workspace = state.workspace();
     let result = match workspace {
         Ok(workspace) => workspace.video_tools.encode_live(&options).await,
@@ -55,7 +55,7 @@ pub async fn media_audio_process(
     overlays: Vec<AudioOverlay>,
     output_path: String,
 ) -> AppResult<String> {
-    state.start_run()?;
+    state.start_run("Mengolah audio")?;
     let workspace = state.workspace();
     let result = match workspace {
         Ok(workspace) => {
@@ -76,7 +76,7 @@ pub async fn media_audio_concat(
     audio_paths: Vec<String>,
     output_path: String,
 ) -> AppResult<String> {
-    state.start_run()?;
+    state.start_run("Menggabungkan audio")?;
     let workspace = state.workspace();
     let result = match workspace {
         Ok(workspace) => {
@@ -97,7 +97,7 @@ pub async fn media_audio_export_preset(
     overlays: Vec<AudioOverlay>,
     output_path: String,
 ) -> AppResult<String> {
-    state.start_run()?;
+    state.start_run("Mengekspor preset audio")?;
     let workspace = state.workspace();
     let result = match workspace {
         Ok(workspace) => {
