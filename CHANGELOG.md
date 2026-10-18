@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.1.3...v1.2.0) (2026-10-18)
+
+
+### Features
+
+* **mcp:** expose the app to AI agents over MCP ([65597af](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/65597afe6c2416789578be26ae45caee17b1e78d))
+* **mcp:** expose the app to AI agents over MCP ([b4eea95](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/b4eea9577957c5eea8df68bab9b380d03a705450))
+
 ## [1.1.3](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.1.2...v1.1.3) (2026-10-17)
 
 
