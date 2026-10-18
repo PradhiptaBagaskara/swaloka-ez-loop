@@ -25,6 +25,21 @@ fn size_of(path: &Path) -> u64 {
     std::fs::metadata(path).expect("berkas ada").len()
 }
 
+/// Pastikan biner bisa dieksekusi. Bit izin hanya ada di Unix; di platform lain
+/// tidak ada yang perlu diperiksa.
+#[cfg(unix)]
+fn assert_executable(path: &Path, kind: &BinaryKind) {
+    use std::os::unix::fs::PermissionsExt;
+    let mode = std::fs::metadata(path)
+        .expect("berkas ada")
+        .permissions()
+        .mode();
+    assert_eq!(mode & 0o111, 0o111, "{kind:?} harus executable");
+}
+
+#[cfg(not(unix))]
+fn assert_executable(_path: &Path, _kind: &BinaryKind) {}
+
 /// Pemasangan lengkap di platform ini: unduh, pasang, lalu pastikan binernya
 /// benar-benar jalan dan versinya sesuai pin.
 #[test]
@@ -50,11 +65,7 @@ fn installs_the_pinned_build_for_this_platform() {
             size_of(&path) > 1_000_000,
             "{kind:?} terlalu kecil, kemungkinan unduhan gagal"
         );
-        if cfg!(unix) {
-            use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(&path).unwrap().permissions().mode();
-            assert_eq!(mode & 0o111, 0o111, "{kind:?} harus executable");
-        }
+        assert_executable(&path, &kind);
     }
 
     // Encoder yang dipakai aplikasi harus ada di build ini.

@@ -1,8 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { listen } from "@tauri-apps/api/event";
 
   import Shell from "$lib/components/shell/Shell.svelte";
   import { app } from "$lib/stores/app.svelte";
+  import { tasks } from "$lib/stores/task.svelte";
   import { update } from "$lib/stores/update.svelte";
   import FfmpegGuide from "$lib/views/FfmpegGuide.svelte";
   import Landing from "$lib/views/Landing.svelte";
@@ -10,6 +12,12 @@
   import UpdateDialog from "$lib/views/UpdateDialog.svelte";
 
   onMount(() => {
+    // Listener run dipasang sekali di sini supaya run yang dimulai dari luar
+    // antarmuka (mis. lewat server MCP) ikut tampil di queue card.
+    void tasks.install();
+    void listen<{ scope: string }>("data://changed", (event) => {
+      void app.applyExternalChange(event.payload.scope);
+    });
     void app.bootstrap().then(() => update.check());
   });
 

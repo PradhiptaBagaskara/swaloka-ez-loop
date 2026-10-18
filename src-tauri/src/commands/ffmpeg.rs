@@ -44,7 +44,7 @@ pub struct FfmpegStatus {
     pub pinned_version: String,
 }
 
-async fn status_of(state: &AppState) -> AppResult<FfmpegStatus> {
+pub(crate) async fn status_of(state: &AppState) -> AppResult<FfmpegStatus> {
     let locator = state.locator();
     let ready = locator.is_available(&state.runner).await;
     let resolved = locator.resolve_ffmpeg();

@@ -46,3 +46,9 @@ pub fn config_dir() -> PathBuf {
 pub fn preferences_file() -> PathBuf {
     config_dir().join("preferences.json")
 }
+
+/// File runtime Kontrol AI: berisi port dan token sesi server MCP yang sedang
+/// jalan, supaya jembatan stdio bisa menemukannya. Dihapus saat server mati.
+pub fn mcp_runtime_file() -> PathBuf {
+    config_dir().join("mcp.json")
+}

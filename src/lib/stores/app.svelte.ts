@@ -2,7 +2,7 @@
 
 import { api, errorMessage, type FfmpegSource, type Preferences, type Project } from "../api";
 
-export type ViewKey = "dashboard" | "channel" | "looping" | "media";
+export type ViewKey = "dashboard" | "channel" | "looping" | "media" | "ai";
 
 export interface NavEntry {
   key: ViewKey;
@@ -18,6 +18,7 @@ export const NAV_SECTIONS: { title: string; entries: NavEntry[] }[] = [
       { key: "channel", label: "EZ Loop", icon: "▣" },
       { key: "looping", label: "Looping", icon: "⟳" },
       { key: "media", label: "Media Tools", icon: "✂" },
+      { key: "ai", label: "Kontrol AI", icon: "◈" },
     ],
   },
 ];
@@ -28,6 +29,7 @@ export const DEFAULT_PREFS: Preferences = {
   hw_encoder: null,
   last_project_path: null,
   recent_projects: [],
+  mcp_port: 8787,
 };
 
 class AppStore {
@@ -42,6 +44,11 @@ class AppStore {
   busy = $state(false);
   settingsOpen = $state(false);
   toast = $state<{ message: string; kind: "success" | "danger" } | null>(null);
+  /**
+   * Revisi data per scope (`channels`, `project`, `prefs`). View membacanya
+   * sebagai dependensi supaya memuat ulang saat data berubah dari luar.
+   */
+  revisions = $state<Record<string, number>>({ channels: 0, project: 0, prefs: 0 });
   /** Layar root yang harus dirender. */
   get screen(): "loading" | "guide" | "landing" | "workspace" {
     if (!this.ffmpegChecked) return "loading";
@@ -117,6 +124,25 @@ class AppStore {
   async refreshPrefs() {
     this.prefs = await api.prefsGet();
     this.applyTheme();
+  }
+
+  /**
+   * Terapkan perubahan yang datang dari luar antarmuka (mis. channel dibuat
+   * lewat server MCP): muat ulang data untuk scope itu dan naikkan revisinya
+   * supaya view yang relevan ikut menyegarkan diri.
+   */
+  async applyExternalChange(scope: string) {
+    try {
+      if (scope === "project") {
+        this.project = await api.projectCurrent();
+      } else if (scope === "prefs") {
+        this.prefs = await api.prefsGet();
+        this.applyTheme();
+      }
+    } catch {
+      /* Abaikan: perubahan berikutnya akan menyinkronkan lagi. */
+    }
+    this.revisions = { ...this.revisions, [scope]: (this.revisions[scope] ?? 0) + 1 };
   }
 
   async prefsRemove(path: string) {

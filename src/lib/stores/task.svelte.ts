@@ -1,6 +1,6 @@
 /// State antrean tugas: progres, aliran log, dan hasil run.
 
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 
 import { errorMessage } from "../api";
 
@@ -59,10 +59,13 @@ class TaskStore {
   elapsedSeconds = $state(0);
 
   private staging: [number, string][] = DEFAULT_STAGING;
-  private unlisten: UnlistenFn[] = [];
   private startedAt: number | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private nextSeq = 0;
+  /** True bila run yang tampil dimulai dari luar antarmuka (mis. server MCP). */
+  private external = false;
+  private installed = false;
+  private onLog: ((record: LogRecord) => void) | null = null;
 
   async run<T>(action: () => Promise<T>, options: RunOptions = {}): Promise<T | undefined> {
     if (this.running) return undefined;
@@ -71,6 +74,8 @@ class TaskStore {
       .slice()
       .sort((left, right) => left[0] - right[0]);
     this.running = true;
+    this.external = false;
+    this.onLog = options.onLog ?? null;
     this.progress = 0;
     this.stage = this.staging[0][1];
     this.logs = [];
@@ -81,8 +86,6 @@ class TaskStore {
     // Panel progres selalu terbuka saat run mulai; pengguna tetap bisa menutupnya.
     this.collapsed = false;
     this.startTimer();
-
-    await this.subscribe(options);
 
     try {
       const value = await action();
@@ -96,8 +99,7 @@ class TaskStore {
       this.error = errorMessage(error);
       return undefined;
     } finally {
-      for (const stop of this.unlisten) stop();
-      this.unlisten = [];
+      this.onLog = null;
       this.stopTimer();
       this.running = false;
     }
@@ -126,16 +128,57 @@ class TaskStore {
     }
   }
 
-  private async subscribe(options: RunOptions) {
-    this.unlisten = await Promise.all([
+  /**
+   * Pasang listener run sekali saja, dipanggil dari `App.svelte` saat mount.
+   * Listener global (bukan per-run) supaya run yang dimulai dari luar antarmuka
+   * — mis. lewat server MCP — ikut tampil di queue card.
+   */
+  async install() {
+    if (this.installed) return;
+    this.installed = true;
+    await Promise.all([
+      listen<{ label?: string }>("task://started", (event) => this.onStarted(event.payload)),
+      listen("task://finished", () => this.onFinished()),
       listen<LogRecord>("task://log", (event) => {
+        if (!this.running) return;
         this.appendLog(event.payload);
-        options.onLog?.(event.payload);
+        if (!this.external) this.onLog?.(event.payload);
       }),
       listen<number>("task://progress", (event) => {
+        if (!this.running) return;
         this.setProgress(event.payload);
-      }),
+      })
     ]);
+  }
+
+  /**
+   * Run dimulai dari luar antarmuka: tampilkan di queue card walau antarmuka
+   * tidak memulainya. Run yang dimulai antarmuka sudah memegang kartu ini, jadi
+   * diabaikan supaya tidak menimpa progresnya.
+   */
+  private onStarted(payload: { label?: string }) {
+    if (this.running) return;
+    this.external = true;
+    this.running = true;
+    this.progress = 0;
+    this.logs = [];
+    this.droppedLogs = 0;
+    this.nextSeq = 0;
+    this.result = null;
+    this.error = null;
+    this.collapsed = false;
+    this.staging = DEFAULT_STAGING;
+    this.stage = payload?.label ?? "Dikerjakan dari luar";
+    this.startTimer();
+  }
+
+  /** Run luar selesai; run yang dimulai antarmuka membereskan dirinya sendiri. */
+  private onFinished() {
+    if (!this.external) return;
+    this.external = false;
+    this.progress = 1;
+    this.stopTimer();
+    this.running = false;
   }
 
   setProgress(value: number) {

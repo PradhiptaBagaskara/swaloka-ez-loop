@@ -16,6 +16,7 @@ export interface Preferences {
   hw_encoder: string | null;
   last_project_path: string | null;
   recent_projects: string[];
+  mcp_port: number;
 }
 
 export interface ProjectStats {
@@ -140,6 +141,14 @@ export interface InstallProgress {
 export interface CacheClearResult {
   removedAudio: number;
   removedLogs: number;
+}
+
+/** Status Kontrol AI (MCP): loopback-only dan dijaga token per sesi. */
+export interface McpStatus {
+  running: boolean;
+  port: number;
+  endpoint: string | null;
+  token: string | null;
 }
 
 export type ChannelStatus =
@@ -284,6 +293,11 @@ export const api = {
   cancelRun: () => invoke<void>("cancel_run"),
   cleanCache: () => invoke<CacheClearResult>("clean_cache"),
   appVersion: () => invoke<string>("app_version"),
+  appExePath: () => invoke<string>("app_exe_path"),
+
+  mcpStatus: () => invoke<McpStatus>("mcp_status"),
+  mcpStart: (port: number) => invoke<McpStatus>("mcp_start", { port }),
+  mcpStop: () => invoke<McpStatus>("mcp_stop"),
 };
 
 /** Ubah pesan error apa pun menjadi teks yang bisa ditampilkan. */

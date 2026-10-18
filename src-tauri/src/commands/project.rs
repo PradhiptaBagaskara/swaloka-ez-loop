@@ -58,6 +58,7 @@ pub fn prefs_get(state: State<'_, AppState>) -> AppResult<Preferences> {
 pub fn prefs_set(state: State<'_, AppState>, prefs: Preferences) -> AppResult<Preferences> {
     let saved = state.set_prefs(prefs)?;
     state.configure_ffmpeg();
+    state.telemetry.notify_data("prefs");
     Ok(saved)
 }
 

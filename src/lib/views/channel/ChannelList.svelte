@@ -30,8 +30,11 @@
   let pendingDelete = $state<Channel | null>(null);
 
   // Kembali dari halaman proses atau selesai memproses: segarkan daftarnya.
+  // `revisions.channels` ikut dibaca supaya perubahan dari luar (mis. server
+  // MCP) menyegarkan daftar tanpa perlu berpindah menu.
   $effect(() => {
     void app.view;
+    void app.revisions.channels;
     void form.channelId;
     void tasks.running;
     if (!form.channelId) void reload();
