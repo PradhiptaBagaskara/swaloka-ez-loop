@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.2.0...v1.3.0) (2026-11-27)
+
+
+### Features
+
+* **ez-loop:** folder video opsional dan nama output tanpa akhiran acak ([c081a52](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/c081a5255743c80cc08bef48cdff8cbce1411528))
+* **ez-loop:** folder video opsional dan nama output tanpa akhiran acak ([5d08148](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/5d08148e85b977640955f944f257f89b19b68650))
+
+
+### Bug Fixes
+
+* **release:** nama aset tanpa versi agar tautan unduhan stabil ([8519075](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/8519075361f516369579db7935618be6648d3e94))
+* **release:** nama aset tanpa versi agar tautan unduhan stabil ([86b048a](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/commit/86b048a540054a6f6466704f9efdc3dd766e6ce5))
+
 ## [1.2.0](https://github.com/PradhiptaBagaskara/swaloka-ez-loop/compare/v1.1.3...v1.2.0) (2026-10-18)
 
 
