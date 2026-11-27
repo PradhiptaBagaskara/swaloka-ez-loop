@@ -114,6 +114,29 @@ jobs:
         with:
           path: installers
 
+      # Buang nomor versi dari nama aset supaya tautan unduhan bisa stabil:
+      # GitHub hanya menyelesaikan `releases/latest/download/<nama>` bila nama
+      # asetnya persis sama di setiap rilis. `tauri build` selalu menyisipkan
+      # versi (mis. `Swaloka EZ Loop_1.1.3_x64-setup.exe`), jadi versi itu
+      # dihapus di sini — sebelum manifest disusun dan aset diunggah — agar
+      # nama di manifest dan nama aset Release tetap sama.
+      - name: Samakan nama aset tanpa versi
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          failed=0
+          while IFS= read -r -d '' f; do
+            dir=$(dirname "$f")
+            base=$(basename "$f")
+            name="${base//_${VERSION}/}"
+            name="${name//-${VERSION}-/-}"
+            if [ "$base" != "$name" ]; then
+              mv "$f" "$dir/$name" || failed=1
+            fi
+          done < <(find installers -type f -print0)
+          exit "$failed"
+
       - name: Susun manifest updater (latest.json)
         env:
           ARTIFACTS_DIR: installers
