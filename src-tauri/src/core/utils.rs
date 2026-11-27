@@ -85,8 +85,26 @@ pub fn safe_base_name(name: &str, max_length: usize) -> String {
 }
 
 /// Kembalikan `path` bila bebas, atau tambahkan `_1`, `_2`, ... sebelum ekstensi.
+///
+/// Kandidat yang sudah dipakai berkas timestamp sidecar juga dianggap terpakai:
+/// menimpanya akan menghapus daftar lagu yang sudah ditulis untuk output lain,
+/// dan `ffmpeg` sendiri akan menolaknya karena berkas itu bukan video.
 pub fn unique_path(path: &Path) -> PathBuf {
-    if !path.exists() {
+    let free = |candidate: &Path| -> bool {
+        if candidate.exists() {
+            return false;
+        }
+        let sidecar = candidate.with_file_name(format!(
+            "{}_timestamp.txt",
+            candidate
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_default()
+        ));
+        !sidecar.exists()
+    };
+
+    if free(path) {
         return path.to_path_buf();
     }
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
@@ -101,7 +119,7 @@ pub fn unique_path(path: &Path) -> PathBuf {
     let mut counter = 1;
     loop {
         let candidate = parent.join(format!("{stem}_{counter}{suffix}"));
-        if !candidate.exists() {
+        if free(&candidate) {
             return candidate;
         }
         counter += 1;
@@ -140,5 +158,24 @@ mod tests {
         assert_eq!(safe_base_name("my song! (1)", 48), "my_song___1_");
         assert_eq!(safe_base_name("ok-name_1", 48), "ok-name_1");
         assert_eq!(safe_base_name("", 48), "audio");
+    }
+
+    #[test]
+    fn unique_path_skips_names_taken_by_sidecars() {
+        let dir = tempfile::tempdir().unwrap();
+        let video = dir.path().join("bg.mp4");
+
+        // Berkas timestamp sisa output lama saja — videonya sudah dihapus.
+        std::fs::write(dir.path().join("bg_timestamp.txt"), b"daftar").unwrap();
+        let picked = unique_path(&video);
+        assert_eq!(picked.file_name().unwrap().to_string_lossy(), "bg_1.mp4");
+
+        // Kandidat pertama kini dipakai video, kandidat kedua oleh sidecar-nya.
+        std::fs::write(&picked, b"x").unwrap();
+        std::fs::write(dir.path().join("bg_1_timestamp.txt"), b"daftar").unwrap();
+        assert_eq!(
+            unique_path(&video).file_name().unwrap().to_string_lossy(),
+            "bg_2.mp4"
+        );
     }
 }

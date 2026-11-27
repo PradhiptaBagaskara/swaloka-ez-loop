@@ -164,17 +164,27 @@ The app SHALL tag merged video with BT.709 colour metadata (colour space, transf
 
 ### Requirement: Output naming
 
-The app SHALL write the output video with a name derived from the user's output name, else from the background video's file name, and SHALL avoid overwriting existing files by choosing a unique name.
+The app SHALL write the output video with a name derived from the user's output name, else from the background video's file name, **without** a timestamp or other generated suffix, and SHALL avoid overwriting existing files by choosing a unique name. A name whose timestamp sidecar already exists SHALL also be treated as taken, so a leftover sidecar is never overwritten.
 
 #### Scenario: Named output
 
 - **WHEN** the user provides an output name
 - **THEN** the generated file uses that name
 
+#### Scenario: Name follows the background video
+
+- **WHEN** no output name is provided
+- **THEN** the generated file is named after the background video's file stem, with only the `.mp4` extension added
+
 #### Scenario: Collision avoidance
 
 - **WHEN** the derived name already exists in the output folder
 - **THEN** a non-colliding name is used instead of overwriting
+
+#### Scenario: Leftover sidecar
+
+- **WHEN** only a timestamp sidecar of the derived name exists
+- **THEN** a non-colliding name is chosen rather than overwriting that sidecar
 
 ### Requirement: Timestamp sidecar
 

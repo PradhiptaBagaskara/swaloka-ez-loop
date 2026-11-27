@@ -116,7 +116,6 @@ impl LoopMergeService {
                 &request.output_dir,
                 &request.output_name,
                 &request.background_path,
-                None,
             )?,
         };
 

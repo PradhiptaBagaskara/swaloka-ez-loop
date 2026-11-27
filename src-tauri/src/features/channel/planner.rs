@@ -83,7 +83,15 @@ impl ChannelPlanner {
             );
         }
         let waiting = detected.waiting_for_video();
-        if waiting > 0 {
+        if waiting > 0 && detected.video_items.is_empty() {
+            self.emit(
+                format!(
+                    "{waiting} plan belum punya video latar — pasang satu per satu di kartu plan, atau isi folder video lalu periksa ulang"
+                ),
+                LogLevel::Warning,
+                1,
+            );
+        } else if waiting > 0 {
             self.emit(
                 format!(
                     "{waiting} plan menunggu video — tambahkan video ke folder lalu periksa ulang, atau pasang satu per satu"

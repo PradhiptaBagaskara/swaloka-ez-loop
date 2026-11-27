@@ -1,13 +1,16 @@
 //! Menyusun nama file output yang bebas tabrakan.
 
-use chrono::{DateTime, Local, Utc};
 use std::path::{Path, PathBuf};
 
-use crate::core::utils::{safe_base_name, unique_path};
+use crate::core::utils::safe_base_name;
 
 pub const DEFAULT_BASE_NAME: &str = "video";
 
 /// Membentuk path video output dari nama pengguna atau video latar.
+///
+/// Nama mengikuti video latar (atau nama yang diisi pengguna) tanpa akhiran
+/// waktu, supaya berkas hasil mudah dicari. Berkas yang sudah ada tidak
+/// ditimpa: `unique_path` menambahkan `_1`, `_2`, dan seterusnya.
 pub struct OutputNamer;
 
 impl OutputNamer {
@@ -16,17 +19,17 @@ impl OutputNamer {
         output_dir: impl AsRef<Path>,
         output_name: &str,
         background_path: impl AsRef<Path>,
-        moment: Option<DateTime<Local>>,
     ) -> std::io::Result<PathBuf> {
         let directory = output_dir.as_ref();
         std::fs::create_dir_all(directory)?;
 
         let base = Self::base_name(output_name, background_path);
-        let suffix = Self::suffix(moment);
-        let candidate = directory.join(format!("{base}_{suffix}.mp4"));
-        Ok(unique_path(&candidate))
+        Ok(crate::core::utils::unique_path(
+            &directory.join(format!("{base}.mp4")),
+        ))
     }
 
+    /// Basis nama berkas: nama pengguna bila ada, selain itu nama video latar.
     pub fn base_name(output_name: &str, background_path: impl AsRef<Path>) -> String {
         let trimmed = output_name.trim();
         if !trimmed.is_empty() {
@@ -42,14 +45,6 @@ impl OutputNamer {
         } else {
             safe_base_name(&stem, 64)
         }
-    }
-
-    /// Empat digit terakhir milidetik epoch.
-    pub fn suffix(moment: Option<DateTime<Local>>) -> String {
-        let millis = moment
-            .map(|value| value.timestamp_millis())
-            .unwrap_or_else(|| Utc::now().timestamp_millis());
-        format!("{:04}", millis % 10000)
     }
 }
 
@@ -67,17 +62,33 @@ mod tests {
     }
 
     #[test]
-    fn suffix_has_four_digits() {
-        assert_eq!(OutputNamer::suffix(None).len(), 4);
+    fn name_follows_the_background_without_a_timestamp() {
+        let dir = tempfile::tempdir().unwrap();
+        let first = OutputNamer.resolve(dir.path(), "", "/x/bg_01.mp4").unwrap();
+        assert_eq!(
+            first.file_name().unwrap().to_string_lossy(),
+            "bg_01.mp4",
+            "tanpa akhiran waktu"
+        );
+
+        std::fs::write(&first, b"x").unwrap();
+        let second = OutputNamer.resolve(dir.path(), "", "/x/bg_01.mp4").unwrap();
+        assert_eq!(
+            second.file_name().unwrap().to_string_lossy(),
+            "bg_01_1.mp4",
+            "berkas yang sudah ada tidak ditimpa"
+        );
     }
 
     #[test]
-    fn avoids_collisions() {
+    fn explicit_name_wins_over_the_background() {
         let dir = tempfile::tempdir().unwrap();
-        let namer = OutputNamer;
-        let first = namer.resolve(dir.path(), "vid", "/x/bg.mp4", None).unwrap();
-        std::fs::write(&first, b"x").unwrap();
-        let second = namer.resolve(dir.path(), "vid", "/x/bg.mp4", None).unwrap();
-        assert_ne!(first, second);
+        let output = OutputNamer
+            .resolve(dir.path(), "gabungan", "/x/bg_01.mp4")
+            .unwrap();
+        assert_eq!(
+            output.file_name().unwrap().to_string_lossy(),
+            "gabungan.mp4"
+        );
     }
 }

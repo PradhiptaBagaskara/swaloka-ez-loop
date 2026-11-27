@@ -42,7 +42,7 @@ The app SHALL create a channel through a dialog asking for the name, the request
 #### Scenario: Follow the video count
 
 - **WHEN** the content count is cleared or zero
-- **THEN** the number of plans follows the number of videos in the video folder
+- **THEN** the number of plans follows the number of videos in the video folder, and a single plan is made when that folder is empty so a video can be attached to it by hand
 
 ### Requirement: Asset detection
 
@@ -60,8 +60,13 @@ Planning SHALL scan the audio folder for audio files and read each file's durati
 
 #### Scenario: Empty folders
 
-- **WHEN** a folder yields no assets
+- **WHEN** the audio folder yields no audio
 - **THEN** planning reports what is missing instead of producing an empty plan set silently
+
+#### Scenario: Empty video folder
+
+- **WHEN** the video folder is unset or contains no videos
+- **THEN** planning still succeeds, the channel holds no videos, and the plans carry no background video until one is attached per plan
 
 ### Requirement: Balanced plan generation
 
