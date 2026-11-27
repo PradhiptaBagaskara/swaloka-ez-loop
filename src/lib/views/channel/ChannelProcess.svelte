@@ -50,9 +50,8 @@
   const selectedPlans = $derived(plans.filter((plan) => plan.selected));
   /** Folder video sudah dipilih: syarat tombol periksa ulang folder. */
   const videoFolderReady = $derived(Boolean(channel?.videoFolderPath));
-  const foldersReady = $derived(
-    Boolean(channel?.audioFolderPath) && Boolean(channel?.videoFolderPath)
-  );
+  /** Folder audio wajib; folder video opsional karena video bisa dipasang per plan. */
+  const foldersReady = $derived(Boolean(channel?.audioFolderPath));
   const audioIndex = $derived(
     new Map((channel?.audioItems ?? []).map((item) => [item.id, item] as const))
   );
@@ -66,8 +65,10 @@
   const planSeconds = $derived(
     plans.reduce((total, plan) => total + plan.totalDurationSeconds, 0)
   );
-  /** Jumlah rencana yang diminta; 0 berarti mengikuti jumlah video. */
-  const target = $derived(channel?.totalContent ? channel.totalContent : videoCount);
+  /** Jumlah rencana yang diminta; 0 berarti mengikuti jumlah video (minimal satu). */
+  const target = $derived(
+    channel?.totalContent ? channel.totalContent : Math.max(1, videoCount)
+  );
   /** Rencana yang belum kebagian video latar. */
   const waiting = $derived(plans.filter((plan) => !plan.backgroundVideoPath).length);
   /** Rencana yang benar-benar bisa diproses sekarang. */
@@ -94,7 +95,7 @@
   const stageOne = $derived(
     foldersReady
       ? { text: "Siap", tone: "success" as const }
-      : { text: "Folder belum lengkap", tone: "gray" as const }
+      : { text: "Folder audio belum dipilih", tone: "gray" as const }
   );
   const stageTwo = $derived(
     plans.length > 0
@@ -455,10 +456,10 @@
           {/if}
         </FolderSlot>
         <FolderSlot
-          label="Folder video"
+          label="Folder video (opsional)"
           path={channel.videoFolderPath}
           icon="▭"
-          emptyHint="Folder berisi video latar"
+          emptyHint="Boleh kosong — video bisa dipasang per plan"
           onPick={pickVideoFolder}
           onClear={() => {
             settingsChanged = plans.length > 0;
@@ -468,7 +469,7 @@
           {#if videoCount > 0}
             {videoCount} video · tiap video jadi satu plan
           {:else}
-            Satu video dipakai untuk satu plan
+            Kosong: plan dibuat tanpa latar, lalu pasang videonya di kartu plan
           {/if}
         </FolderSlot>
 
@@ -489,7 +490,7 @@
           />
           <span class={hintClass}>
             {#if videoCount === 0}
-              Isi jumlah konten yang ingin dibuat; tiap plan butuh satu video latar.
+              Kosongkan untuk satu plan; pasang video latarnya di kartu plan sebelum diproses.
             {:else if target > videoCount}
               {target} plan dibuat; {videoCount} bisa diproses sekarang, {Math.max(0, target - videoCount)} menunggu video.
             {:else}
@@ -561,8 +562,8 @@
       {/snippet}
       {#if !foldersReady}
         <p class="text-xs text-muted">
-          Pilih folder audio dan folder video dulu di tahap 1. Aplikasi akan membuat satu plan
-          untuk tiap video, dengan playlist yang durasinya merata dan tidak kembar.
+          Pilih folder audio dulu di tahap 1, isinya minimal satu lagu. Folder video boleh kosong —
+          plan tetap dibuat, dan tiap videonya dipasang di kartu plan sebelum diproses.
         </p>
       {:else if plans.length === 0}
         <p class="text-xs text-muted">

@@ -113,12 +113,13 @@ impl ChannelDetector {
     }
 
     /// Pindai folder channel dan perbarui `audioItems` serta `videoItems`.
+    ///
+    /// Folder video boleh kosong: plan tetap dibuat tanpa latar dan pemilihan
+    /// videonya dilakukan per plan. Yang wajib ada hanyalah folder audio berisi
+    /// minimal satu lagu.
     pub async fn detect(&self, channel: &Channel) -> Result<Channel, AppError> {
         if channel.audio_folder_path.trim().is_empty() {
             return Err(AppError::new("Folder audio channel belum dipilih"));
-        }
-        if channel.video_folder_path.trim().is_empty() {
-            return Err(AppError::new("Folder video channel belum dipilih"));
         }
 
         let audio_paths = Self::scan_folder(&channel.audio_folder_path, &AUDIO_EXTENSIONS);
@@ -128,13 +129,9 @@ impl ChannelDetector {
                 channel.audio_folder_path
             )));
         }
+        // Folder video yang belum dipilih atau kosong sama-sama menghasilkan
+        // daftar video kosong, bukan kegagalan.
         let video_paths = Self::scan_folder(&channel.video_folder_path, &VIDEO_EXTENSIONS);
-        if video_paths.is_empty() {
-            return Err(AppError::new(format!(
-                "Tidak ada berkas video di folder video: {}",
-                channel.video_folder_path
-            )));
-        }
 
         let candidates: Vec<ChannelAudioItem> = audio_paths
             .iter()
@@ -164,22 +161,38 @@ impl ChannelDetector {
                 1,
             );
         }
-        self.emit(
-            format!(
-                "Terdeteksi {} lagu ({:.0} menit) dan {} video — target {} plan",
-                assets.audio.len(),
-                assets.audio_seconds() / 60.0,
-                assets.videos.len(),
-                assets.videos.len()
-            ),
-            LogLevel::Info,
-            0,
-        );
-
         let mut updated = channel.clone();
         updated.audio_items = assets.audio;
         updated.video_items = assets.videos;
         updated.touch();
+
+        let plan_target = updated.plan_target();
+        self.emit(
+            format!(
+                "Terdeteksi {} lagu ({:.0} menit) dan {} video — target {} plan",
+                updated.audio_items.len(),
+                updated
+                    .audio_items
+                    .iter()
+                    .map(ChannelAudioItem::effective_duration)
+                    .sum::<f64>()
+                    / 60.0,
+                updated.video_items.len(),
+                plan_target
+            ),
+            LogLevel::Info,
+            0,
+        );
+        if updated.video_items.is_empty() {
+            self.emit(
+                String::from(
+                    "Folder video kosong — plan dibuat tanpa video latar, pasang videonya per plan atau isi foldernya lalu periksa ulang",
+                ),
+                LogLevel::Warning,
+                1,
+            );
+        }
+
         Ok(updated)
     }
 
@@ -270,7 +283,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn detect_rejects_empty_folders_naming_them() {
+    async fn detect_rejects_empty_audio_folder_naming_it() {
         let audio = tempfile::tempdir().unwrap();
         let video = tempfile::tempdir().unwrap();
         touch(video.path(), "bg.mp4");
@@ -285,22 +298,44 @@ mod tests {
             "pesan menyebut folder yang bermasalah: {}",
             error.message
         );
+    }
 
-        // Kasus kedua: folder audio berisi, folder video kosong.
-        let full_audio = tempfile::tempdir().unwrap();
+    #[tokio::test]
+    async fn detect_accepts_empty_video_folder() {
+        let audio = tempfile::tempdir().unwrap();
+        touch(audio.path(), "lagu.mp3");
         let empty_video = tempfile::tempdir().unwrap();
-        touch(full_audio.path(), "lagu.mp3");
 
-        let case = channel_with(full_audio.path(), empty_video.path());
-        let error = detector().detect(&case).await.unwrap_err();
-        assert!(error.message.contains("folder video"), "{}", error.message);
-        assert!(
-            error
-                .message
-                .contains(&empty_video.path().to_string_lossy().to_string()),
-            "pesan menyebut folder video: {}",
-            error.message
+        let case = channel_with(audio.path(), empty_video.path());
+        let detected = detector()
+            .detect(&case)
+            .await
+            .expect("folder video kosong bukan galat");
+        assert!(detected.video_items.is_empty());
+        assert_eq!(detected.audio_items.len(), 1);
+        // Satu plan tetap dibuat supaya video bisa dipasang manual per plan.
+        assert_eq!(detected.plan_target(), 1);
+    }
+
+    #[tokio::test]
+    async fn detect_accepts_unset_video_folder() {
+        let audio = tempfile::tempdir().unwrap();
+        touch(audio.path(), "lagu.mp3");
+
+        let mut channel = Channel::create(
+            String::from("ch_1"),
+            String::from("Lounge"),
+            String::from("/p"),
+            String::from("/p/outputs"),
+            1,
         );
+        channel.audio_folder_path = audio.path().to_string_lossy().to_string();
+
+        let detected = detector()
+            .detect(&channel)
+            .await
+            .expect("folder video belum dipilih bukan galat");
+        assert!(detected.video_items.is_empty());
     }
 
     #[tokio::test]

@@ -243,9 +243,15 @@ impl Channel {
     /// Jumlah plan yang harus dibuat: yang diminta pengguna, dan 0 berarti
     /// mengikuti jumlah video. Plan yang belum kebagian video tetap dibuat
     /// dan menunggu video.
+    ///
+    /// Bila jumlah konten dikosongkan sementara folder video juga kosong, satu
+    /// plan tetap dibuat supaya pengguna punya tempat memasang video secara
+    /// manual — tanpa ini perencanaan gagal hanya karena foldernya kosong.
     pub fn plan_target(&self) -> usize {
         if self.total_content > 0 {
             self.total_content as usize
+        } else if self.video_items.is_empty() {
+            1
         } else {
             self.video_items.len()
         }
@@ -402,10 +408,11 @@ mod tests {
         // Minta lebih sedikit: permintaan yang dipakai.
         channel.total_content = 1;
         assert_eq!(channel.plan_target(), 1);
-        // Tanpa video dan tanpa permintaan: tidak ada rencana.
+        // Tanpa video dan tanpa permintaan: satu rencana, supaya video bisa
+        // dipasang manual per plan tanpa lebih dulu mengisi folder.
         channel.video_items.clear();
         channel.total_content = 0;
-        assert_eq!(channel.plan_target(), 0);
+        assert_eq!(channel.plan_target(), 1);
 
         assert_eq!(channel.loop_cap(), DEFAULT_SUGGESTED_LOOP_CAP);
         channel.suggested_loop_cap = 0;
